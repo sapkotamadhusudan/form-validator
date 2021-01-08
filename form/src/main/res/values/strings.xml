@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="message_required">%1$s is required</string>
+    <string name="message_length_required">%1$s should be %2$s characters</string>
+    <string name="message_min_length_required">%1$s should be greater than %2$s characters</string>
+    <string name="message_max_length_required">%1$s should be less than %2$s characters</string>
+    <string name="message_min_max_length_required">%1$s should be %2$s to %3$s characters</string>
+
+    <string name="message_range_required">%1$s should be %2$s</string>
+    <string name="message_min_range_required">%1$s should be greater than %2$s</string>
+    <string name="message_max_range_required">%1$s should be less than %2$s</string>
+    <string name="message_min_max_range_required">%1$s should be %2$s to %3$s</string>
+
+    <string name="message_invalid">%1$s is invalid</string>
+    <string name="message_validation_compare">%1$s doesn\'t match with %2$s</string>
+    <string name="message_validation_password_compare">Password doesn\'t match</string>
+
+</resources>
