@@ -1,4 +1,5 @@
 # Form Validator
+[ ![Download](https://api.bintray.com/packages/sapkotamadhusudan99/form-validator/com.maddy:form-validator/images/download.svg?version=0.0.1) ](https://bintray.com/sapkotamadhusudan99/form-validator/com.maddy:form-validator/0.0.1/link)
 
 A Toolkit to maintain and validates form fields in android application.
 
@@ -9,12 +10,10 @@ The Form Validator can be installed directly into your application by importing 
 Add the following code to your project's **build.gradle** file:
 
 ```groovy
-allprojects {
-    repositories {
-        maven {
-            url "https://maven.pkg.github.com/sapkotamadhusudan/form-validator"
-        }
-    }
+repositories {
+	maven {
+		url  "https://dl.bintray.com/sapkotamadhusudan99/form-validator"
+	}
 }
 ```
 
@@ -25,3 +24,4 @@ dependencies {
     implementation "com.maddy:form-validator:0.0.1"
 }
 ```
+
