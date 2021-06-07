@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.annotation.StringRes
 import java.text.NumberFormat
 import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * Created by Madhusudan Sapkota on 8/30/20.
@@ -26,7 +25,9 @@ class CompareForValidation(val compareFor: String) : ValidationRule("")
 
 class CustomValidation(val validator: (String?) -> String?) : ValidationRule("")
 
-class RequiredValidation(message: String) : ValidationRule(message)
+class RequiredValidation(message: String, val requiredIfNotEmpty: Array<String>? = null) :
+    ValidationRule(message)
+
 class LengthValidation(
     val min: Int = 0,
     val max: Int? = null,
@@ -40,7 +41,7 @@ class RangeValidation(
 ) : ValidationRule(message)
 
 class RegexValidation(
-    val pattern: List<Regex>,
+    val pattern: Regex,
     message: String
 ) : ValidationRule(message)
 
@@ -48,6 +49,8 @@ class RegexValidation(
 object Rules {
 
     object Patterns {
+        val NAME = Regex("^[a-zA-Z.]+\$")
+        val FULL_NAME = Regex("^[a-zA-Z. ]+\$")
         val EMAIL =
             Regex("^([A-Z|a-z|0-9](\\.|_){0,1})+[A-Z|a-z|0-9]\\@([A-Z|a-z|0-9])+((\\.){0,1}[A-Z|a-z|0-9]){2}\\.[a-z]{2,3}(.[n]{1}[p]{1})?\$")
         val DIGIT_EXIST_REGEX = Regex(".*\\d+.*")
@@ -58,30 +61,34 @@ object Rules {
     enum class Message(@StringRes val idRes: Int) {
         REQUIRED(R.string.message_required),
         LENGTH(R.string.message_length_required),
-        MAX_LENGTH(R.string.message_min_length_required),
-        MIN_LENGTH(R.string.message_max_length_required),
+        MAX_LENGTH(R.string.message_max_length_required),
+        MIN_LENGTH(R.string.message_min_length_required),
         MIN_MAX_LENGTH(R.string.message_min_max_length_required),
 
         RANGE(R.string.message_range_required),
-        MAX_RANGE(R.string.message_min_range_required),
-        MIN_RANGE(R.string.message_max_range_required),
+        MAX_RANGE(R.string.message_max_range_required),
+        MIN_RANGE(R.string.message_min_range_required),
         MIN_MAX_RANGE(R.string.message_min_max_range_required),
 
-        NOT_MATCH(R.string.message_validation_compare),
         INVALID(R.string.message_invalid);
+    }
+
+    fun getMessage(context: Context, type: Message, vararg args: String?): String {
+        return context.getString(type.idRes, *args)
     }
 
     class Builder(private val label: String) {
 
         private var required: Boolean = false
+        private var requiredIfNotEmpty: Array<String>? = null
 
-        private var minLength: Int = Int.MIN_VALUE
-        private var maxLength: Int = Int.MAX_VALUE
+        private var minLength: Int? = null
+        private var maxLength: Int? = null
 
-        private var minRange: Double = Double.MIN_VALUE
-        private var maxRange: Double = Double.MAX_VALUE
+        private var minRange: Double? = null
+        private var maxRange: Double? = null
 
-        private var pattern: ArrayList<Regex> = ArrayList()
+        private var pattern: Regex? = null
 
         private var compareFor: String? = null
         private var compareWith: String? = null
@@ -91,30 +98,9 @@ object Rules {
         private val numberFormatter = NumberFormat.getInstance(Locale.getDefault())
 
 
-        fun required(required: Boolean = true): Builder {
+        fun required(required: Boolean = true, requiredIfNotEmpty: Array<String>? = null): Builder {
             this.required = required
-            return this
-        }
-
-        fun email(): Builder {
-            this.pattern.add(Patterns.EMAIL)
-            return this
-        }
-
-
-        fun digit(): Builder {
-            this.pattern.add(Patterns.DIGIT_EXIST_REGEX)
-            return this
-        }
-
-
-        fun uppercase(): Builder {
-            this.pattern.add(Patterns.UPPERCASE_EXIST_REGEX)
-            return this
-        }
-
-        fun lowercase(): Builder {
-            this.pattern.add(Patterns.LOWERCASE_EXIST_REGEX)
+            this.requiredIfNotEmpty = requiredIfNotEmpty
             return this
         }
 
@@ -140,7 +126,7 @@ object Rules {
         }
 
         fun pattern(pattern: Regex): Builder {
-            this.pattern.add(pattern)
+            this.pattern = pattern
             return this
         }
 
@@ -163,7 +149,7 @@ object Rules {
         fun build(context: Context): ValidationRules {
             val mappedLabel = label.replace(" *", "")
             return ValidationRules(
-                required = required(context, mappedLabel, required),
+                required = required(context, mappedLabel, required, requiredIfNotEmpty),
                 length = length(context, mappedLabel, minLength, maxLength),
                 range = range(context, mappedLabel, minRange, maxRange),
                 regex = pattern(context, mappedLabel, pattern),
@@ -171,11 +157,7 @@ object Rules {
                 compareWith = compareWith?.let {
                     CompareWithValidation(
                         it,
-                        context.resources.getString(
-                            Message.NOT_MATCH.idRes,
-                            it.capitalize(),
-                            mappedLabel
-                        )
+                        "${it.capitalize(Locale.getDefault())} did not match with $mappedLabel"
                     )
                 },
                 custom = if (custom == null) null else custom
@@ -183,31 +165,31 @@ object Rules {
         }
 
 
-        fun getMessage(context: Context, type: Message, vararg args: String?): String {
-            val message = context.getString(type.idRes, *args)
-            return message
+        private fun getMessage(context: Context, type: Message, vararg args: String?): String {
+            return context.getString(type.idRes, *args)
         }
 
         private fun required(
             context: Context,
             fieldName: String,
-            required: Boolean?
+            required: Boolean?,
+            requiredIfNotEmpty: Array<String>? = null,
         ): RequiredValidation? {
-            if (required == null || required == false) return null
-            return RequiredValidation(getMessage(context, Message.REQUIRED, fieldName))
+            if (required == null || (requiredIfNotEmpty.isNullOrEmpty() && required == false)) return null
+            return RequiredValidation(getMessage(context, Message.REQUIRED, fieldName), requiredIfNotEmpty)
         }
 
         private fun length(
             context: Context,
             fieldName: String,
-            minLength: Int,
-            maxLength: Int
+            minLength: Int?,
+            maxLength: Int?
         ): LengthValidation? {
-            if (minLength == Int.MIN_VALUE && maxLength == Int.MAX_VALUE) return null
+            if (minLength == null && maxLength == null) return null
 
 
-            val localeMax = numberFormatter.format((maxLength).toLong())
-            val localeMin = numberFormatter.format((minLength).toLong())
+            val localeMax = numberFormatter.format(maxLength?.toLong() ?: 0)
+            val localeMin = numberFormatter.format(minLength?.toLong() ?: 0)
 
             val message =
                 when {
@@ -217,17 +199,17 @@ object Rules {
                         fieldName,
                         localeMax
                     )
-                    minLength == Int.MIN_VALUE -> getMessage(
-                        context,
-                        Message.MIN_LENGTH,
-                        fieldName,
-                        localeMin
-                    )
-                    maxLength == Int.MAX_VALUE -> getMessage(
+                    minLength == null -> getMessage(
                         context,
                         Message.MAX_LENGTH,
                         fieldName,
                         localeMax
+                    )
+                    maxLength == null -> getMessage(
+                        context,
+                        Message.MIN_LENGTH,
+                        fieldName,
+                        localeMin
                     )
                     else -> getMessage(
                         context,
@@ -238,29 +220,29 @@ object Rules {
                     )
                 }
 
-            return LengthValidation(min = minLength, max = maxLength, message = message)
+            return LengthValidation(min = minLength ?: 0, max = maxLength, message = message)
         }
 
         private fun range(
             context: Context,
             fieldName: String,
-            minLength: Double,
-            maxLength: Double
+            minLength: Double?,
+            maxLength: Double?
         ): RangeValidation? {
-            if (minLength == Double.MIN_VALUE && maxLength == Double.MAX_VALUE) return null
+            if (minLength == null && maxLength == null) return null
 
-            val localeMax = numberFormatter.format(maxLength)
-            val localeMin = numberFormatter.format(minLength)
+            val localeMax = numberFormatter.format(maxLength ?: 0)
+            val localeMin = numberFormatter.format(minLength ?: 0)
 
             val message = when {
                 maxLength == minLength -> getMessage(
                     context, Message.RANGE, fieldName, localeMax
                 )
-                minLength == Double.MIN_VALUE -> getMessage(
-                    context, Message.MIN_RANGE, fieldName, localeMin
-                )
-                maxLength == Double.MAX_VALUE -> getMessage(
+                minLength == null -> getMessage(
                     context, Message.MAX_RANGE, fieldName, localeMax
+                )
+                maxLength == null -> getMessage(
+                    context, Message.MIN_RANGE, fieldName, localeMin
                 )
                 else -> getMessage(
                     context, Message.MIN_MAX_RANGE, fieldName, localeMin, localeMax
@@ -268,7 +250,7 @@ object Rules {
             }
 
             return RangeValidation(
-                min = minLength,
+                min = minLength ?: 0.0,
                 max = maxLength,
                 message = message
             )
@@ -277,9 +259,9 @@ object Rules {
         private fun pattern(
             context: Context,
             fieldName: String,
-            pattern: List<Regex>
+            pattern: Regex?
         ): RegexValidation? {
-            if (pattern.isNullOrEmpty()) return null
+            if (pattern == null) return null
             return RegexValidation(
                 pattern, getMessage(
                     context, Message.INVALID, fieldName

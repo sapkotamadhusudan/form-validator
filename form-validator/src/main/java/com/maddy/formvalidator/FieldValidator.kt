@@ -21,13 +21,9 @@ object Validator {
     }
 
     private fun <V> validateRequired(value: V?, rule: RequiredValidation?): String? {
-        if (rule == null) return null
+        if (rule == null || !rule.requiredIfNotEmpty.isNullOrEmpty()) return null
 
-        if (value == null) return rule.message
-
-        if (value is Boolean && value == false) return rule.message
-
-        if (value is String && value.isEmpty()) return rule.message
+        if (isEmpty(value)) return rule.message
 
         return null
     }
@@ -55,12 +51,25 @@ object Validator {
         return null
     }
 
+    fun isEmpty(value: Any?): Boolean {
+        if (
+            value == null
+            || (value is String && value.isEmpty())
+            || (value is Map<*, *> && value.isEmpty())
+            || (value is Array<*> && value.isEmpty())
+            || (value is Collection<*> && value.isEmpty())
+        ) {
+            return true
+        }
+        return false
+    }
+
     private fun validateNumber(value: Double, rules: ValidationRules): String? {
         return checkRange(value, rules.range)
     }
 
     private fun checkPattern(value: String, rule: RegexValidation?): String? {
-        return if (rule?.pattern?.every{ it.matches(value) } == false) rule.message else null
+        return if (rule?.pattern?.matches(value) == false) rule.message else null
     }
 
     private fun checkLength(value: String, rule: LengthValidation?): String? {

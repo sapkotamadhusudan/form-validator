@@ -1,12 +1,10 @@
 package com.maddy.formvalidator
 
-import android.util.Log
 import android.view.View
 import android.widget.*
 import androidx.core.widget.addTextChangedListener
 import com.google.android.material.textfield.TextInputLayout
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.*
 
 /**
  * Validate the editText
@@ -24,33 +22,26 @@ fun EditText.value(): String? {
 }
 
 fun EditText.register(
-    form: Form,
+    formValidator: FormValidator,
     name: String,
     rules: ValidationRules,
-    setError: ((String?) -> Unit)? = null
+    setError: (String?) -> Unit = {}
 ) {
-    form.registerInput(
+    formValidator.registerInput(
         name = name,
         rules = rules,
-        setError = setError ?: { this.error = it },
-        setValue = { this.setText(it) },
+        setError = setError,
+        setValue = { this.setText(it.toString()) },
         valueProvider = { this.value() },
-        setChangeListener = {
-            if (form.validateOnChange) {
-                val watcher = this.addTextChangedListener(afterTextChanged = {
-                    form.validateField(
-                        name
-                    )
-                })
-                return@registerInput { this.removeTextChangedListener(watcher) }
-            }
-            return@registerInput {}
+        setChangeListener = { listener ->
+            val watcher = this.addTextChangedListener(afterTextChanged = {
+                listener(it?.toString())
+            })
+            return@registerInput { this.removeTextChangedListener(watcher) }
         },
-        setFocusListener = {
+        setFocusListener = { listener ->
             this.setOnFocusChangeListener { _, hasFocus ->
-                if (!hasFocus) form.validateField(
-                    name
-                )
+                listener(value(), hasFocus)
             }
             return@registerInput {}
         }
@@ -58,25 +49,24 @@ fun EditText.register(
 }
 
 fun Spinner.register(
-    form: Form,
+    formValidator: FormValidator,
     name: String,
     rules: ValidationRules,
-    getValue: () -> String?,
-    setValue: (String?) -> Unit = {},
+    getValue: () -> Any?,
+    setValue: (Any?) -> Unit = {},
     setError: (String?) -> Unit = {}
 ) {
-    val count = AtomicInteger(0)
-    form.registerInput(
+    formValidator.registerInput(
         name = name,
         rules = rules,
         setError = setError,
         setValue = setValue,
         valueProvider = getValue,
-        setChangeListener = {
-            if (form.validateOnChange) {
+        setChangeListener = { listener ->
+            if (formValidator.validateOnChange) {
                 this.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
                     override fun onNothingSelected(parent: AdapterView<*>?) {
-                        form.validateField(name)
+                        listener.invoke(null)
                     }
 
                     override fun onItemSelected(
@@ -85,10 +75,7 @@ fun Spinner.register(
                         position: Int,
                         id: Long
                     ) {
-                        //#FIXME: onItemSelection will invoke on first lunch, so it will tries to validate without user interaction
-                        if (count.getAndAdd(1) < 1) return
-
-                        form.validateField(name)
+                        listener.invoke(getValue())
                     }
                 }
                 return@registerInput { this.onItemSelectedListener = null }
@@ -96,9 +83,9 @@ fun Spinner.register(
 
             return@registerInput {}
         },
-        setFocusListener = {
+        setFocusListener = { listener ->
             this.setOnFocusChangeListener { _, hasFocus ->
-                if (!hasFocus) form.validateField(name)
+                listener.invoke(getValue(), hasFocus)
             }
             return@registerInput {}
         }
@@ -106,74 +93,69 @@ fun Spinner.register(
 }
 
 
-fun TextInputLayout.register(form: Form, name: String, rules: ValidationRules) {
-    form.registerInput(
+fun TextInputLayout.register(
+    formValidator: FormValidator,
+    name: String,
+    rules: ValidationRules,
+    getValue: (() -> Any?)? = null,
+    setValue: ((Any?) -> Unit)? = null
+) {
+    formValidator.registerInput(
         name = name,
         rules = rules,
-        setError = {
-            Log.d("Form", "TextInputLayout.register(), setError(${it})")
-            this.error = it
+        setError = { this.error = it },
+        setValue = setValue ?: {
+            this.editText?.setText(it?.toString())
+            Unit
         },
-        setValue = { this.editText?.setText(it) },
-        valueProvider = { this.editText?.value() },
-        setChangeListener = {
-            val watcher = this.editText?.addTextChangedListener(afterTextChanged = {
-                form.validateField(name)
+        valueProvider = getValue ?: { this.editText?.value() },
+        setChangeListener = { listener ->
+            val watcher = this.editText?.addTextChangedListener(afterTextChanged = { editable ->
+                listener.invoke(editable?.toString())
             })
             return@registerInput { this.editText?.removeTextChangedListener(watcher) }
         },
-        setFocusListener = {
+        setFocusListener = { listener ->
             this.setOnFocusChangeListener { _, hasFocus ->
-                if (!hasFocus) form.validateField(name)
+                listener.invoke(editText?.value(), hasFocus)
             }
-
             return@registerInput {}
         }
     )
 }
 
 fun RadioGroup.register(
-    form: Form,
+    formValidator: FormValidator,
     name: String,
     rules: ValidationRules,
     setError: (String?) -> Unit = {},
-    setValue: (String?) -> Unit = {},
+    setValue: (Any?) -> Unit = {},
     extractValue: ((checkedId: Int) -> String?)? = null,
     onValueChange: (checkedId: Int) -> Unit = {}
 ) {
 
     val getValue = extractValue ?: { checkedId ->
         val button = this.findViewById<RadioButton>(checkedId)
-        (button?.tag ?: button?.text)?.toString()?.toLowerCase()
+        (button?.tag ?: button?.text)?.toString()?.toLowerCase(Locale.getDefault())
     }
-    form.registerInput(
+    formValidator.registerInput(
         name = name,
         rules = rules,
         setError = setError,
         setValue = setValue,
         valueProvider = { getValue(this.checkedRadioButtonId) },
-        setChangeListener = {
+        setChangeListener = { listener ->
             this.setOnCheckedChangeListener { _, checkedId ->
-                form.validateField(name)
+                listener(getValue(checkedId))
                 onValueChange(checkedId)
             }
             return@registerInput { this.setOnCheckedChangeListener(null) }
         },
-        setFocusListener = {
+        setFocusListener = { listener ->
             this.setOnFocusChangeListener { _, hasFocus ->
-                if (!hasFocus) form.validateField(name)
+                listener(getValue(this.checkedRadioButtonId), hasFocus)
             }
             return@registerInput {}
         }
     )
-}
-
-fun <I> Collection<I>.every(predicate: (I) -> Boolean): Boolean {
-    val isMatched = AtomicBoolean(true)
-    this.forEach {
-        if (!predicate(it)) {
-            isMatched.set(false)
-        }
-    }
-    return isMatched.get()
 }

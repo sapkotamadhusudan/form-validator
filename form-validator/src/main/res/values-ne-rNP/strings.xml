@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="message_required">%1$s आवश्यक छ |</string>
+
+    <string name="message_length_required">%1$s %2$s वर्णको हुनुपर्छ ।</string>
+    <string name="message_min_length_required">%1$s %2$s वर्ण भन्दा ठूलो हुनुपर्दछ ।</string>
+    <string name="message_max_length_required">%1$s %2$s वर्ण भन्दा कम हुनुपर्दछ ।</string>
+    <string name="message_min_max_length_required">$1$s %2$s देखि %3$s वर्णको हुनुपर्दछ ।</string>
+
+    <string name="message_range_required">%1$s %2$s हुनुपर्छ ।</string>
+    <string name="message_min_range_required">%1$s %2$s वर्ण भन्दा बढि हुनुपर्दछ ।</string>
+    <string name="message_max_range_required">%1$s %2$s भन्दा कम हुनुपर्दछ ।</string>
+    <string name="message_min_max_range_required">$1$s %2$s देखि %3$s हुनुपर्दछ ।</string>
+
+    <string name="message_invalid">%1$s अवैध छ |</string>
+    <string name="message_validation_compare">%1$s र %2$s मेल खाँदैन ।</string>
+    <string name="message_validation_password_compare">पासवर्ड मेल खाँदैन ।</string>
+
+</resources>

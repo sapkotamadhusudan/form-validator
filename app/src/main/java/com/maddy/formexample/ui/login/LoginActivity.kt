@@ -11,7 +11,7 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.textfield.TextInputLayout
 import com.maddy.formexample.R
-import com.maddy.formvalidator.Form
+import com.maddy.formvalidator.FormValidator
 import com.maddy.formvalidator.Rules
 import com.maddy.formvalidator.register
 
@@ -19,7 +19,7 @@ class LoginActivity : AppCompatActivity() {
 
     private lateinit var loginViewModel: LoginViewModel
 
-    private val loginForm = Form()
+    private val loginForm = FormValidator()
 
     private lateinit var loading: ProgressBar
 
@@ -42,7 +42,7 @@ class LoginActivity : AppCompatActivity() {
             "email",
             Rules.Builder(getString(R.string.prompt_email))
                 .required()
-                .email()
+                .pattern(Rules.Patterns.EMAIL)
                 .build(this)
         )
 
@@ -112,7 +112,7 @@ class LoginActivity : AppCompatActivity() {
     private fun login() {
         if (loginForm.validate()) {
             loading.visibility = View.VISIBLE
-            loginViewModel.login(loginForm.value("email"), loginForm.value("password"))
+            loginViewModel.login(loginForm.value("email").asStringOrNull(), loginForm.value("password").asStringOrNull())
         }
     }
 
